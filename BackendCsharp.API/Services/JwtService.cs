@@ -1,8 +1,8 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
 using BackendCsharp.API.Entities;
+using Microsoft.IdentityModel.Tokens;
 
 public class JwtService
 {
@@ -15,38 +15,44 @@ public class JwtService
 
     public string GenerateToken(UserEntity user)
     {
-        try{
         var keyString = _config["Jwt:Key"];
-            Console.WriteLine(keyString);
-        if (string.IsNullOrEmpty(keyString))
-            throw new Exception("JWT Key não configurada");
+        if (string.IsNullOrWhiteSpace(keyString))
+            throw new InvalidOperationException("JWT Key não configurada.");
 
-        var key = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(keyString)
-        );
+        var issuer = _config["Jwt:Issuer"];
+        var audience = _config["Jwt:Audience"];
+        var expiresInMinutesRaw = _config["Jwt:ExpiresInMinutes"];
 
-        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+        if (string.IsNullOrWhiteSpace(expiresInMinutesRaw))
+            throw new InvalidOperationException("Jwt:ExpiresInMinutes não configurado.");
 
-        var claims = new[]
+        if (!double.TryParse(expiresInMinutesRaw, out var expiresInMinutes))
+            throw new InvalidOperationException("Jwt:ExpiresInMinutes inválido.");
+
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(keyString));
+        var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
-            new Claim(ClaimTypes.Name, user.Username)
+            new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(
+    JwtRegisteredClaimNames.Email,
+    user.Username?.ToString() ?? string.Empty,
+    ClaimValueTypes.String
+),
+            new Claim(JwtRegisteredClaimNames.Name, user.Username ?? string.Empty),
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 
         var token = new JwtSecurityToken(
-            issuer: _config["Jwt:Issuer"],
-            audience: _config["Jwt:Audience"],
+            issuer: issuer,
+            audience: audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddMinutes(
-                Convert.ToDouble(_config["Jwt:ExpiresInMinutes"])
-            ),
-            signingCredentials: creds
+            notBefore: DateTime.UtcNow,
+            expires: DateTime.UtcNow.AddMinutes(expiresInMinutes),
+            signingCredentials: credentials
         );
 
-            return new JwtSecurityTokenHandler().WriteToken(token); }catch (Exception ex)
-        {
-            Console.WriteLine($"Erro ao gerar token JWT: {ex.Message}");
-            return null;
-        }
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 }
