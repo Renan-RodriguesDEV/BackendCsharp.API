@@ -6,7 +6,7 @@ Serviço de autenticação do desafio FullStack da Banana Ltda. Este backend em 
 
 Este microsserviço não cuida de reservas. A responsabilidade dele é exclusivamente autenticação:
 
-- cadastro de usuário
+- cadastro de usuário por e-mail
 - login com validação de credenciais
 - emissão de token JWT
 - persistência dos dados de autenticação em banco relacional
@@ -39,12 +39,12 @@ Exemplo de payload:
 
 ```json
 {
-	"username": "user@email.com",
+	"email": "user@email.com",
 	"password": "Senha@123"
 }
 ```
 
-Retorno: usuário criado com `id`, `username` e `createdAt`.
+Retorno: usuário criado com `id`, `email` e `createdAt`.
 
 ### `POST /api/user/login`
 
@@ -54,7 +54,7 @@ Exemplo de payload:
 
 ```json
 {
-	"username": "user@email.com",
+	"email": "user@email.com",
 	"password": "Senha@123"
 }
 ```
@@ -69,7 +69,7 @@ Retorno:
 
 ### `GET /api/user`
 
-Endpoint simples de health check/manual test.
+Endpoint protegido para validar o JWT e inspecionar as claims básicas do usuário autenticado.
 
 ## JWT gerado
 
@@ -151,7 +151,7 @@ dotnet run --project BackendCsharp.API/BackendCsharp.API.csproj
 Este backend está funcional para autenticação, mas para ficar mais forte no contexto de avaliação técnica ainda há melhorias importantes:
 
 1. Configurar de fato o pipeline de autenticação JWT no ASP.NET Core, com `UseAuthentication()` e parâmetros completos do bearer token.
-2. Trocar o campo `username` para `email`, alinhando o contrato com o enunciado da vaga.
+2. O contrato agora usa `email`, alinhando melhor com o enunciado da vaga.
 3. Implementar prevenção de cadastro duplicado por e-mail.
 4. Adicionar refresh token, que é opcional no teste, mas seria um bom diferencial.
 5. Cobrir o fluxo com testes automatizados de cadastro, login e geração do token.
