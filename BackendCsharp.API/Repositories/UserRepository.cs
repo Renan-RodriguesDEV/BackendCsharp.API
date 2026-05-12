@@ -20,22 +20,21 @@ namespace BackendCsharp.API.Repositories
         }
         public UserResponse Save(UserRequests request)
         {
-            if(!Validate(request)) throw new ArgumentException("Dados invalidos!");
+            if(!Validate(request)) throw new ArgumentException("Dados inválidos.");
+
+            if (db.Users.Any(x => x.Email == request.Email))
+                throw new InvalidOperationException("Já existe um usuário cadastrado com este e-mail.");
+
             var passwordHash = passwordService.Hash(request.Password);
-            var entity = new UserEntity(request.Username,passwordHash);
+            var entity = new UserEntity(request.Email,passwordHash);
             db.Add(entity);
             db.SaveChanges();
-            return new UserResponse(entity.Id,entity.Username,entity.CreatedAt);
+            return new UserResponse(entity.Id,entity.Email,entity.CreatedAt);
         }
 
-        public UserEntity Find(string username)
+        public UserEntity? Find(string email)
         {
-            var user = db.Users.FirstOrDefault(x => x.Username == username);
-            if (user!=null)
-            {
-                return user;
-            }
-            return null;
+            return db.Users.FirstOrDefault(x => x.Email == email);
         }
 
         private bool Validate(UserRequests request)

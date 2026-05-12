@@ -2,16 +2,16 @@
 {
     public class UserRequests
     {
-        public string Username { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
 
         public UserRequests()
         {
             
         }
-        public UserRequests(string Username, string Password)
+        public UserRequests(string Email, string Password)
         {
-            this.Username = Username;
+            this.Email = Email;
             this.Password = Password;
         }
     }

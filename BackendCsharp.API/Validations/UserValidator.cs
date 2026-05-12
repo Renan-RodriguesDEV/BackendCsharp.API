@@ -7,8 +7,13 @@ namespace BackendCsharp.API.Validations
     {
         public UserValidator()
         {
-            RuleFor(user => user.Username).NotEmpty().WithMessage("Username dont empty");
-            RuleFor(user => user.Password).NotEmpty().WithMessage("Password dont empty");
+            RuleFor(user => user.Email)
+                .NotEmpty().WithMessage("E-mail é obrigatório.")
+                .EmailAddress().WithMessage("E-mail inválido.");
+
+            RuleFor(user => user.Password)
+                .NotEmpty().WithMessage("Senha é obrigatória.")
+                .MinimumLength(8).WithMessage("Senha deve ter pelo menos 8 caracteres.");
         }
     }
 }

@@ -3,8 +3,10 @@ using BackendCsharp.API.Entities;
 using BackendCsharp.API.Repositories;
 using BackendCsharp.API.Responses;
 using BackendCsharp.API.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace BackendCsharp.API.Controllers
 {
@@ -22,47 +24,56 @@ namespace BackendCsharp.API.Controllers
             this.jwtService = jwtService;
         }
         [HttpGet]
-        [ProducesResponseType(typeof(UserResponse), 200)]
+        [Authorize]
         public IActionResult Get()
         {
-
-            return Ok("Ok");
+            return Ok(new
+            {
+                userId = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value,
+                email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value
+            });
         }
         [HttpPost]
         [Route("login")]
-        [ProducesResponseType(typeof(UserResponse), 200)]
+        [ProducesResponseType(typeof(TokenResponse), 200)]
         public IActionResult Login([FromBody] UserRequests user)
         {
             try
             {
+                UserEntity? userDb = repository.Find(user.Email);
+                if (userDb == null)
+                {
+                    return Unauthorized("Credenciais inválidas.");
+                }
 
-                UserEntity userDb = repository.Find(user.Username);
                 bool check = passwordService.Verify(user.Password, userDb.Password);
-                if (!check) { return Unauthorized("Acesso negado"); }
-                UserResponse response = new UserResponse(Id: userDb.Id, Username: userDb.Username, CreatedAt: userDb.CreatedAt);
-                Console.WriteLine(response.ToString());
+                if (!check) { return Unauthorized("Credenciais inválidas."); }
+
                 string token = jwtService.GenerateToken(userDb);
-                return Ok(new TokenResponse{ Token=token });
+                return Ok(new TokenResponse { Token = token });
             }
-            catch (Exception e)
+            catch (Exception e) when (e is ArgumentException)
             {
-                Console.Write(e.Message);
-                return BadRequest();
+                return BadRequest(e.Message);
             }
         }
         [HttpPost]
         [Route("register")]
+        [ProducesResponseType(typeof(UserResponse), 201)]
         public IActionResult Register([FromBody] UserRequests user)
         {
             try
             {
                 var response = repository.Save(user);
-                return Created("", response);
+                return Created(string.Empty, response);
             }
-            catch (Exception e)
+            catch (InvalidOperationException e)
             {
-                Console.Write(e.Message);
-                return BadRequest();
+                return Conflict(e.Message);
+            }
+            catch (ArgumentException e)
+            {
+                return BadRequest(e.Message);
             }
 
 
