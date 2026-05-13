@@ -22,12 +22,27 @@ O token emitido aqui é consumido pelo backend Python via header `Authorization:
 - JWT com assinatura simétrica
 - FluentValidation para validação de entrada
 
-## Fluxo de integração com o backend Python
+## Arquitetura e fluxo de integração
 
-1. O front-end envia `POST /api/user/login` para este serviço.
-2. O backend C# autentica o usuário e retorna um JWT assinado.
-3. O front-end encaminha esse JWT para o backend Python em todas as requisições protegidas.
-4. O backend Python valida o token localmente com a mesma chave configurada por variável de ambiente.
+```mermaid
+graph LR
+    A[Front-end] -->|POST /register| B[C# Auth Service]
+    A -->|POST /login| B
+    B -->|valida credenciais| C[PostgreSQL]
+    B -->|retorna JWT| A
+    A -->|GET com Bearer Token| D[Python Reservation Service]
+    D -->|valida JWT com chave compartilhada| D
+    D -->|acesso autorizado| E[Banco de Reservas]
+```
+
+Para uma visão visual da arquitetura, fluxo de autenticação e modelo de domínio, consulte [**DIAGRAMAS.MD**](../DIAGRAMAS.MD).
+
+### Fluxo de autenticação
+
+1. O front-end envia `POST /api/user/register` ou `POST /api/user/login` para este serviço.
+2. O backend C# autentica o usuário e retorna um JWT assinado com expiração configurável.
+3. O front-end encaminha esse JWT em todas as requisições para serviços protegidos via header `Authorization: Bearer <token>`.
+4. O backend Python valida o token localmente com a mesma chave configurada por variável de ambiente, sem chamadas de retorno.
 
 ## Endpoints
 
@@ -141,22 +156,8 @@ dotnet run --project BackendCsharp.API/BackendCsharp.API.csproj
 
 ## Decisões técnicas
 
-- BCrypt foi usado para não armazenar senha em texto puro.
-- JWT foi escolhido por ser stateless e simples de integrar com o backend Python.
-- Entity Framework Core foi usado por atender ao requisito de ORM e acelerar a persistência relacional.
-- FluentValidation separa regra de validação da lógica de persistência.
-
-## O que ainda pode ser evoluído
-
-Este backend está funcional para autenticação, mas para ficar mais forte no contexto de avaliação técnica ainda há melhorias importantes:
-
-1. Configurar de fato o pipeline de autenticação JWT no ASP.NET Core, com `UseAuthentication()` e parâmetros completos do bearer token.
-2. O contrato agora usa `email`, alinhando melhor com o enunciado da vaga.
-3. Implementar prevenção de cadastro duplicado por e-mail.
-4. Adicionar refresh token, que é opcional no teste, mas seria um bom diferencial.
-5. Cobrir o fluxo com testes automatizados de cadastro, login e geração do token.
-6. Externalizar totalmente segredos e strings de conexão para variáveis de ambiente fora do `appsettings.json`.
-
-## Observação final
-
-O backend já está integrado com o serviço Python via JWT compartilhado, mas o contrato ainda pode ser refinado para ficar 100% aderente ao enunciado original da vaga.
+- **BCrypt** para hash seguro de senhas, sem armazenamento em texto puro.
+- **JWT com assinatura simétrica** para autenticação stateless e integração simplificada com backend Python.
+- **Entity Framework Core** como ORM para persistência relacional com migrations versionadas.
+- **FluentValidation** para separação de regras de validação da lógica de persistência.
+- **.NET 10** para aproveitar as últimas melhorias de performance e recursos da plataforma.
